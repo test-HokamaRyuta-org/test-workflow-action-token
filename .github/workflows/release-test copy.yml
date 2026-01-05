@@ -1,0 +1,36 @@
+name: Release App Test
+on:
+  workflow_dispatch: # 手動実行でテストするため
+
+jobs:
+  release-poc:
+    runs-on: ubuntu-latest
+    steps:
+      # --- 1. リポジトリのチェックアウト ---
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # --- 2. Git操作（コミットとPR作成） ---
+      - name: Create Dummy PR
+        run: |
+          # Gitのユーザー設定
+          git config user.name "release-bot[bot]"
+          git config user.email "release-bot[bot]@users.noreply.github.com"
+
+          # ブランチ作成とダミーファイルの変更
+          BRANCH_NAME="test-release-${{ github.run_id }}"
+          git checkout -b $BRANCH_NAME
+          echo "Release Test at $(date)" >> release-log.txt
+          
+          git add release-log.txt
+          git commit -m "chore: test release commit"
+          git push origin $BRANCH_NAME
+
+          # GitHub CLIでPR作成
+          gh pr create \
+            --title "Test Release PR #${{ github.run_id }}" \
+            --body "This PR was created by GitHub App with team membership validation." \
+            --base main \
+            --head $BRANCH_NAME
