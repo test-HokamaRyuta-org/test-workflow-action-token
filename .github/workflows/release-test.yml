@@ -6,55 +6,17 @@ jobs:
   release-poc:
     runs-on: ubuntu-latest
     steps:
-      # --- 1. GitHub Appのトークンを生成 ---
-      - name: Generate Token
-        id: generate_token
-        uses: actions/create-github-app-token@v1
-        with:
-          app-id: ${{ secrets.TEST_APP_ID }}
-          private-key: ${{ secrets.TEST_APP_PRIVATE_KEY }}
-          # 自分のテスト用Organizationに移譲した場合は owner を指定
-          # owner: "your-test-org-name"
-
-      # --- 2. チーム所属チェック (github-script) ---
-      - name: Check Team Membership
-        id: check_team
-        uses: actions/github-script@v7
-        with:
-          # 生成したAppのトークンを使う（Members権限が必要）
-          github-token: ${{ steps.generate_token.outputs.token }}
-          script: |
-            const org = "test-HokamaRyuta-org";
-            const team_slug = "release-team";
-            const username = context.actor;
-
-            try {
-              const { data: membership } = await github.rest.teams.getMembershipForUserInOrg({
-                org: org,
-                team_slug: team_slug,
-                username: username,
-              });
-              
-              if (membership.state === 'active') {
-                console.log(`Success: ${username} is an active member of ${team_slug}`);
-              } else {
-                core.setFailed(`User ${username} is not an active member.`);
-              }
-            } catch (error) {
-              core.setFailed(`Access Denied: ${username} is not in team ${team_slug}. Error: ${error.message}`);
-            }
-
-      # --- 3. リポジトリのチェックアウト ---
+      # --- 1. リポジトリのチェックアウト ---
       - name: Checkout
         uses: actions/checkout@v4
         with:
           token: ${{ steps.generate_token.outputs.token }}
           fetch-depth: 0
 
-      # --- 4. Git操作（コミットとPR作成） ---
+      # --- 2. Git操作（コミットとPR作成） ---
       - name: Create Dummy PR
         run: |
-          # Gitのユーザー設定（Appの名前っぽくしておくと綺麗です）
+          # Gitのユーザー設定
           git config user.name "release-bot[bot]"
           git config user.email "release-bot[bot]@users.noreply.github.com"
 
