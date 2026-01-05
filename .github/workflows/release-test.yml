@@ -34,7 +34,7 @@ jobs:
           git config user.name "release-bot[bot]"
           git config user.email "release-bot[bot]@users.noreply.github.com"
 
-      - nmae: Create Dummy PR
+      - name: Create Dummy PR
       # ブランチ作成とダミーファイルの変更
         run: |
           BRANCH_NAME="test-release-${{ github.run_id }}"
