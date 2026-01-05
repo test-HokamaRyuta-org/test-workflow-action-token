@@ -1,64 +1,42 @@
-name: Release App Test
+name: Release PR
+
 on:
-  workflow_dispatch: # 手動実行でテストするため
+  workflow_dispatch:
+    inputs:
+      semver:
+        description: "version bump type"
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      plugins:
+        description: "comma separated plugin directories"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
 
 jobs:
-  release-poc:
+  release:
     runs-on: ubuntu-latest
+
     steps:
-      # --- 1. GitHub Appのトークンを生成 ---
-      - name: Generate Token
-        id: generate_token
-        uses: actions/create-github-app-token@v1
+      - uses: actions/checkout@v4
         with:
-          app-id: ${{ secrets.TEST_APP_ID }}
-          private-key: ${{ secrets.TEST_APP_PRIVATE_KEY }}
-          # 自分のテスト用Organizationに移譲した場合は owner を指定
-          # owner: "your-test-org-name"
-
-      # --- 2. チーム所属チェック (github-script) ---
-      - name: Check Team Membership
-        id: check_team
-        uses: actions/github-script@v7
-        with:
-          # 生成したAppのトークンを使う（Members権限が必要）
-          github-token: ${{ steps.generate_token.outputs.token }}
-          script: |
-            const org = "test-HokamaRyuta-org";
-            const team_slug = "release-team";
-            const username = context.actor;
-
-            try {
-              const { data: membership } = await github.rest.teams.getMembershipForUserInOrg({
-                org: org,
-                team_slug: team_slug,
-                username: username,
-              });
-              
-              if (membership.state === 'active') {
-                console.log(`Success: ${username} is an active member of ${team_slug}`);
-              } else {
-                core.setFailed(`User ${username} is not an active member.`);
-              }
-            } catch (error) {
-              core.setFailed(`Access Denied: ${username} is not in team ${team_slug}. Error: ${error.message}`);
-            }
-
-      # --- 3. リポジトリのチェックアウト ---
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          token: ${{ steps.generate_token.outputs.token }}
           fetch-depth: 0
 
-      # --- 4. Git操作（コミットとPR作成） ---
-      - name: Create Dummy PR
+      - name: Configure git
         run: |
-          # Gitのユーザー設定（Appの名前っぽくしておくと綺麗です）
           git config user.name "release-bot[bot]"
           git config user.email "release-bot[bot]@users.noreply.github.com"
 
-          # ブランチ作成とダミーファイルの変更
+      - nmae: Create Dummy PR
+      # ブランチ作成とダミーファイルの変更
+        run: |
           BRANCH_NAME="test-release-${{ github.run_id }}"
           git checkout -b $BRANCH_NAME
           echo "Release Test at $(date)" >> release-log.txt
@@ -73,5 +51,3 @@ jobs:
             --body "This PR was created by GitHub App with team membership validation." \
             --base main \
             --head $BRANCH_NAME
-        env:
-          GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
